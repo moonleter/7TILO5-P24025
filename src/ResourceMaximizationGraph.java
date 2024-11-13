@@ -1,12 +1,9 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ResourceMaximizationGraph {
     private Map<Integer, Node> nodes = new HashMap<>();
     private int initialBudget;
-    private int maxResources = 0;
+    private int stepCounter = 1;
 
     public ResourceMaximizationGraph(int initialBudget) {
         this.initialBudget = initialBudget;
@@ -26,28 +23,56 @@ public class ResourceMaximizationGraph {
     }
 
     public int maximizeResources(int startId) {
-        Set<Node> visited = new HashSet<>();
-        dfs(nodes.get(startId), initialBudget, 0, visited, 0);
-        return maxResources;
+        Node startNode = nodes.get(startId);
+        if (startNode == null) return 0;
+
+        SearchState searchState = new SearchState(initialBudget);
+        searchState.visitedNodes.add(startNode);
+        searchState.totalResourcesCollected += startNode.collectResource();
+
+        System.out.println("[t_" + stepCounter++ + "] h_0 (0), u_" + startNode.id + " (" + startNode.initialResource + ") -> r=" + searchState.budget + ", z=" + searchState.totalResourcesCollected);
+
+        performGreedyBestFirstSearch(startNode, searchState);
+
+        System.out.println("Maximální získané zdroje: " + searchState.totalResourcesCollected);
+        return searchState.totalResourcesCollected;
     }
 
-    private void dfs(Node node, int currentBudget, int currentResources, Set<Node> visited, int time) {
-        if (node == null || currentBudget <= 0 || visited.contains(node)) return;
+    private void performGreedyBestFirstSearch(Node startNode, SearchState searchState) {
+        PriorityQueue<Node> priorityQueue = new PriorityQueue<>((n1, n2) -> {
+            double ratio1 = (double) n1.resource / (n1.edges.isEmpty() ? 1 : n1.edges.stream().mapToInt(e -> e.cost).average().orElse(1));
+            double ratio2 = (double) n2.resource / (n2.edges.isEmpty() ? 1 : n2.edges.stream().mapToInt(e -> e.cost).average().orElse(1));
+            return Double.compare(ratio2, ratio1);
+        });
+        priorityQueue.add(startNode);
 
-        visited.add(node);
-        int collectedResource = node.collectResource();
-        int newResources = currentResources + collectedResource;
-        maxResources = Math.max(maxResources, newResources);
+        while (!priorityQueue.isEmpty()) {
+            Node currentNode = priorityQueue.poll();
 
-        System.out.printf("[t_%d] h_i (N/A), u_i (%d) -> r=%d, z=%d%n", time, node.id, currentBudget, newResources);
+            List<Edge> sortedEdges = new ArrayList<>(currentNode.edges);
+            sortedEdges.sort((e1, e2) -> {
+                double resourceCostRatio1 = (double) e1.to.resource / e1.cost;
+                double resourceCostRatio2 = (double) e2.to.resource / e2.cost;
+                return Double.compare(resourceCostRatio2, resourceCostRatio1);
+            });
 
-        for (Edge edge : node.edges) {
-            if (edge.cost <= currentBudget) {
-                dfs(edge.to, currentBudget - edge.cost, newResources, visited, time + 1);
+            for (Edge edge : sortedEdges) {
+                Node fromNode = edge.from;
+                Node toNode = edge.to;
+
+                if (fromNode == currentNode && !searchState.visitedNodes.contains(toNode) && searchState.budget >= edge.cost) {
+                    if (toNode.resource > 0) {
+                        searchState.budget -= edge.cost;
+                        searchState.totalResourcesCollected += toNode.collectResource();
+                        searchState.budget += toNode.initialResource;
+                        searchState.visitedNodes.add(toNode);
+
+                        System.out.println("[t_" + stepCounter++ + "] h_" + fromNode.id + " (" + edge.cost + "), u_" + toNode.id + " (" + toNode.initialResource + ") -> r=" + searchState.budget + ", z=" + searchState.totalResourcesCollected);
+
+                        priorityQueue.add(toNode);
+                    }
+                }
             }
         }
-
-        visited.remove(node);
-        node.resource = collectedResource; // Reset resource for other paths
     }
 }

@@ -3,10 +3,10 @@ public class Main {
         int initialBudget = 485;
         ResourceMaximizationGraph graph = new ResourceMaximizationGraph(initialBudget);
 
-        // Definice uzlů a zdrojů
+
         graph.addNode(10, 10);
         graph.addNode(15, 15);
-        graph.addNode(3, 15);
+        graph.addNode(40, 40);
         graph.addNode(1, 1);
         graph.addNode(3, 3);
         graph.addNode(14, 14);
@@ -21,7 +21,6 @@ public class Main {
         graph.addNode(36, 36);
 
 
-        // Definice hran a nákladů
         graph.addEdge(10, 14, 48);
         graph.addEdge(15, 14, 21);
         graph.addEdge(1, 40, 4);
@@ -38,8 +37,6 @@ public class Main {
         graph.addEdge(12, 36, 27);
 
 
-        // Výpočet maximálních zdrojů
-        int maxResources = graph.maximizeResources(5);
-        System.out.println("Maximální získané zdroje: " + maxResources);
+        graph.maximizeResources(5);
     }
 }
