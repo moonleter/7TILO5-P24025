@@ -26,19 +26,19 @@ public class ResourceMaximizationGraph {
         Node startNode = nodes.get(startId);
         if (startNode == null) return 0;
 
-        SearchState searchState = new SearchState(initialBudget);
-        searchState.visitedNodes.add(startNode);
-        searchState.totalResourcesCollected += startNode.collectResource();
+        CurrentSearchState currentSearchState = new CurrentSearchState(initialBudget);
+        currentSearchState.visitedNodes.add(startNode);
+        currentSearchState.totalResourcesCollected += startNode.collectResource();
 
-        System.out.println("[t_" + stepCounter++ + "] h_0 (0), u_" + startNode.id + " (" + startNode.initialResource + ") -> r=" + searchState.budget + ", z=" + searchState.totalResourcesCollected);
+        System.out.println("[t_" + stepCounter++ + "] h_0 (0), u_" + startNode.id + " (" + startNode.initialResource + ") -> r=" + currentSearchState.remainingBudget + ", z=" + currentSearchState.totalResourcesCollected);
 
-        performGreedyBestFirstSearch(startNode, searchState);
+        performGreedyBestFirstSearch(startNode, currentSearchState);
 
-        System.out.println("Maximální získané zdroje: " + searchState.totalResourcesCollected);
-        return searchState.totalResourcesCollected;
+        System.out.println("Maximální získané zdroje: " + currentSearchState.totalResourcesCollected);
+        return currentSearchState.totalResourcesCollected;
     }
 
-    private void performGreedyBestFirstSearch(Node startNode, SearchState searchState) {
+    private void performGreedyBestFirstSearch(Node startNode, CurrentSearchState currentSearchState) {
         PriorityQueue<Node> priorityQueue = new PriorityQueue<>((n1, n2) -> {
             double ratio1 = (double) n1.resource / (n1.edges.isEmpty() ? 1 : n1.edges.stream().mapToInt(e -> e.cost).average().orElse(1));
             double ratio2 = (double) n2.resource / (n2.edges.isEmpty() ? 1 : n2.edges.stream().mapToInt(e -> e.cost).average().orElse(1));
@@ -50,24 +50,21 @@ public class ResourceMaximizationGraph {
             Node currentNode = priorityQueue.poll();
 
             List<Edge> sortedEdges = new ArrayList<>(currentNode.edges);
-            sortedEdges.sort((e1, e2) -> {
-                double resourceCostRatio1 = (double) e1.to.resource / e1.cost;
-                double resourceCostRatio2 = (double) e2.to.resource / e2.cost;
-                return Double.compare(resourceCostRatio2, resourceCostRatio1);
-            });
+            sortedEdges.forEach(e -> e.to = e.to == currentNode ? e.from : e.to);
+
 
             for (Edge edge : sortedEdges) {
                 Node fromNode = edge.from;
                 Node toNode = edge.to;
 
-                if (fromNode == currentNode && !searchState.visitedNodes.contains(toNode) && searchState.budget >= edge.cost) {
+                if (fromNode == currentNode && !currentSearchState.visitedNodes.contains(toNode) && currentSearchState.remainingBudget >= edge.cost) {
                     if (toNode.resource > 0) {
-                        searchState.budget -= edge.cost;
-                        searchState.totalResourcesCollected += toNode.collectResource();
-                        searchState.budget += toNode.initialResource;
-                        searchState.visitedNodes.add(toNode);
+                        currentSearchState.remainingBudget -= edge.cost;
+                        currentSearchState.totalResourcesCollected += toNode.collectResource();
+                        currentSearchState.remainingBudget += toNode.initialResource;
+                        currentSearchState.visitedNodes.add(toNode);
 
-                        System.out.println("[t_" + stepCounter++ + "] h_" + fromNode.id + " (" + edge.cost + "), u_" + toNode.id + " (" + toNode.initialResource + ") -> r=" + searchState.budget + ", z=" + searchState.totalResourcesCollected);
+                        System.out.println("[t_" + stepCounter++ + "] h_" + fromNode.id + " (" + edge.cost + "), u_" + toNode.id + " (" + toNode.initialResource + ") -> r=" + currentSearchState.remainingBudget + ", z=" + currentSearchState.totalResourcesCollected);
 
                         priorityQueue.add(toNode);
                     }

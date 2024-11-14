@@ -1,13 +1,13 @@
 import java.util.HashSet;
 import java.util.Set;
 
-class SearchState {
-    int budget;
+class CurrentSearchState {
+    int remainingBudget;
     int totalResourcesCollected;
     Set<Node> visitedNodes;
 
-    public SearchState(int initialBudget) {
-        this.budget = initialBudget;
+    public CurrentSearchState(int initialBudget) {
+        this.remainingBudget = initialBudget;
         this.totalResourcesCollected = 0;
         this.visitedNodes = new HashSet<>();
     }
